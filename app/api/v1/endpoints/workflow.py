@@ -41,43 +41,44 @@ async def upload_document(
         doc_number = ocr_result.get("doc_number", "Unknown")
         
         # 2. Check if Document exists to avoid Unique Constraint violation
-        existing_doc = None
-        if doc_number != "Unknown":
-            existing_doc = db.query(Document).filter(Document.doc_number == doc_number).first()
+        # existing_doc = None
+        # if doc_number != "Unknown":
+        #     existing_doc = db.query(Document).filter(Document.doc_number == doc_number).first()
             
-        if existing_doc:
-            existing_doc.full_name = ocr_result.get("full_name", "Unknown")
-            existing_doc.doc_type = ocr_result.get("doc_type", DocumentTypeEnum.UNKNOWN)
-            existing_doc.dob = ocr_result.get("dob", None)
-            existing_doc.gender = ocr_result.get("gender", None)
-            existing_doc.issue_date = ocr_result.get("issue_date", None)
-            existing_doc.address = ocr_result.get("address", None)
-            existing_doc.expiry_date = ocr_result.get("expiry_date", None)
-            existing_doc.nationality = ocr_result.get("nationality", None)
-            existing_doc.mrz_no = ocr_result.get("mrz_no", None)
-            existing_doc.doc_photo = image_bytes
-            existing_doc.user_id = user_id
-            db.commit()
-            db.refresh(existing_doc)
-            new_doc = existing_doc
-        else:
-            new_doc = Document(
-                full_name=ocr_result.get("full_name", "Unknown"),
-                doc_number=doc_number,
-                doc_type=ocr_result.get("doc_type", DocumentTypeEnum.UNKNOWN),
-                dob=ocr_result.get("dob", None),
-                gender=ocr_result.get("gender", None),
-                issue_date=ocr_result.get("issue_date", None),
-                address=ocr_result.get("address", None),
-                expiry_date=ocr_result.get("expiry_date", None),
-                nationality=ocr_result.get("nationality", None),
-                mrz_no=ocr_result.get("mrz_no", None),
-                doc_photo=image_bytes,
-                user_id=user_id 
-            )
-            db.add(new_doc)
-            db.commit()
-            db.refresh(new_doc)
+        # if existing_doc:
+        #     existing_doc.full_name = ocr_result.get("full_name", "Unknown")
+        #     existing_doc.doc_type = ocr_result.get("doc_type", DocumentTypeEnum.UNKNOWN)
+        #     existing_doc.dob = ocr_result.get("dob", None)
+        #     existing_doc.gender = ocr_result.get("gender", None)
+        #     existing_doc.issue_date = ocr_result.get("issue_date", None)
+        #     existing_doc.address = ocr_result.get("address", None)
+        #     existing_doc.expiry_date = ocr_result.get("expiry_date", None)
+        #     existing_doc.nationality = ocr_result.get("nationality", None)
+        #     existing_doc.mrz_no = ocr_result.get("mrz_no", None)
+        #     existing_doc.doc_photo = image_bytes
+        #     existing_doc.user_id = user_id
+        #     db.commit()
+        #     db.refresh(existing_doc)
+        #     new_doc = existing_doc
+        # else:
+        
+        new_doc = Document(
+            full_name=ocr_result.get("full_name", "Unknown"),
+            doc_number=doc_number,
+            doc_type=ocr_result.get("doc_type", DocumentTypeEnum.UNKNOWN),
+            dob=ocr_result.get("dob", None),
+            gender=ocr_result.get("gender", None),
+            issue_date=ocr_result.get("issue_date", None),
+            address=ocr_result.get("address", None),
+            expiry_date=ocr_result.get("expiry_date", None),
+            nationality=ocr_result.get("nationality", None),
+            mrz_no=ocr_result.get("mrz_no", None),
+            doc_photo=image_bytes,
+            user_id=user_id 
+        )
+        db.add(new_doc)
+        db.commit()
+        db.refresh(new_doc)
             
         extracted_data = ExtractedDocumentData(
             full_name=new_doc.full_name,
@@ -221,10 +222,10 @@ async def verify_person(
         mrz = True
 
     verification_confidence = (
-        0.25 * face_score
-        + 0.30 * blockchain_face_score
-        + 0.30 * (1.0 if result else 0.0)
-        + 0.15 * ocr_confidence
+        0.45 * face_score
+        + 0.20 * blockchain_face_score
+        + 0.25 * (1.0 if result else 0.0)
+        + 0.10 * ocr_confidence
     )
     # 5. Create Risk Entry
     risk = Risk(

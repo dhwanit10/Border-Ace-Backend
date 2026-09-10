@@ -1,5 +1,5 @@
 Signal	Weight
-Face score	25%
-Blockchain face score	30%
-Blockchain result	30%
-OCR confidence	15%
+Face score	45%
+Blockchain face score	20%
+Blockchain result	25%
+OCR confidence	10%
