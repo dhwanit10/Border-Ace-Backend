@@ -40,6 +40,7 @@ class VerifyPersonResponse(BaseModel):
     face_match_score: float
     ocr_confidence: float
     mrz_validation: bool
+    reasons: list[str]
     tampering_probability: float
     status: RiskStatus
     blockchain_verification: bool

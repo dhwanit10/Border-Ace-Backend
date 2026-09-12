@@ -15,6 +15,7 @@ class Risk(Base):
     id = Column(Integer, primary_key=True, index=True)
     ocr_confidence = Column(Float, nullable=True)
     mrz_validation = Column(Boolean, nullable=True)
+    reasons = Column(Text, nullable=True)
     tampering_probability = Column(Float, nullable=True)
     face_match_score = Column(Float, nullable=True)
     database_verification = Column(Boolean, nullable=True)

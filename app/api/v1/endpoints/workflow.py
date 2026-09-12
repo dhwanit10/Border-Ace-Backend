@@ -17,7 +17,7 @@ from app.models.user import User
 from app.core.ocr_parser import process_document_image
 import json
 from app.core.face_matcher import match_faces, match_faces_with_cropping
-
+from app.core.mrz_validator import verify_document_mrz
 from app.blockchain.hash_utils import generate_document_hash
 from app.blockchain.service import register_document, verify_document
 
@@ -79,6 +79,7 @@ async def upload_document(
         db.add(new_doc)
         db.commit()
         db.refresh(new_doc)
+
             
         extracted_data = ExtractedDocumentData(
             full_name=new_doc.full_name,
@@ -149,6 +150,22 @@ async def verify_person(
     db.commit()
     db.refresh(doc)
 
+    mrz_result = {
+        "valid": False,
+        "reasons": []
+    }
+    
+    if(doc.doc_type.value.lower() == "passport"):
+        mrz_result = verify_document_mrz(doc)
+
+    if not mrz_result["valid"]:
+        print("MRZ verification failed")
+
+        for reason in mrz_result["reasons"]:
+            print(reason)
+    else:
+        print("MRZ validation TRue")
+
     #blockchain verification
     blockchain_document = (
                 db.query(BlockchainDocument)
@@ -217,12 +234,9 @@ async def verify_person(
     db.commit()
     db.refresh(verification)
 
-    mrz = False
-    if extracted_data.doc_type == "passport":
-        mrz = True
-
     verification_confidence = (
-        0.45 * face_score
+        0.35 * face_score
+        + 0.10 * (1.0 if mrz_result["valid"] else 0.0)
         + 0.20 * blockchain_face_score
         + 0.25 * (1.0 if result else 0.0)
         + 0.10 * ocr_confidence
@@ -230,7 +244,8 @@ async def verify_person(
     # 5. Create Risk Entry
     risk = Risk(
         ocr_confidence=ocr_confidence,
-        mrz_validation=mrz,
+        mrz_validation=mrz_result["valid"],
+        reasons=json.dumps(mrz_result["reasons"]),
         face_match_score=face_score,
         database_verification=True,
         approved=False,
@@ -250,7 +265,8 @@ async def verify_person(
         verification_id=verification.id,
         risk_id=risk.id,
         face_match_score=risk.face_match_score,
-        mrz_validation=mrz,
+        mrz_validation=mrz_result["valid"],
+        reasons=mrz_result["reasons"],
         ocr_confidence=risk.ocr_confidence,
         tampering_probability=risk.tampering_probability,
         status=risk.status,
