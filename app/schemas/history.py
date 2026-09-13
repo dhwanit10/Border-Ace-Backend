@@ -30,7 +30,9 @@ class HistoryRiskResponse(BaseModel):
 
     id: int
     ocr_confidence: Optional[float] = None
-    mrz_validation: Optional[bool] = None
+    document_specific_validation: Optional[bool] = None
+    validation_type: Optional[str] = None
+    reasons: Optional[list[str]] = None
     tampering_probability: Optional[float] = None
     face_match_score: Optional[float] = None
     database_verification: Optional[bool] = None

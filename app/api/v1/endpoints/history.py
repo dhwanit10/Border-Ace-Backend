@@ -4,7 +4,12 @@ from app.models.system import Session as SystemSession
 from app.core.database import get_db
 from app.models.verification import VerificationEntry
 from app.schemas.history import HistoryResponse, HistoryItemResponse
-
+import json
+from app.schemas.history import (
+    HistoryResponse,
+    HistoryItemResponse,
+    HistoryRiskResponse,
+)
 router = APIRouter()
 
 
@@ -14,12 +19,40 @@ def build_history_response(verifications):
     for verification in verifications:
         session = verification.session
 
+        risks = []
+
+        for risk in verification.risk_entries:
+            reasons = []
+
+            if risk.reasons:
+                try:
+                    reasons = json.loads(risk.reasons)
+                except (json.JSONDecodeError, TypeError):
+                    reasons = []
+
+            risks.append(
+                HistoryRiskResponse(
+                    id=risk.id,
+                    ocr_confidence=risk.ocr_confidence,
+                    document_specific_validation=risk.document_specific_validation,
+                    validation_type=risk.validation_type,
+                    reasons=reasons,
+                    tampering_probability=risk.tampering_probability,
+                    face_match_score=risk.face_match_score,
+                    database_verification=risk.database_verification,
+                    approved=risk.approved,
+                    status=risk.status,
+                    description=risk.description,
+                    verifier_admin_id=risk.verifier_admin_id,
+                )
+            )
+
         data.append(
             HistoryItemResponse(
                 verification_id=verification.id,
                 date_time_recorded=verification.date_time_recorded,
                 document=verification.document,
-                risks=verification.risk_entries,
+                risks=risks,
                 officer=verification.officer,
                 session=session,
                 system=session.system if session else None

@@ -18,6 +18,7 @@ from app.core.ocr_parser import process_document_image
 import json
 from app.core.face_matcher import match_faces, match_faces_with_cropping
 from app.core.mrz_validator import verify_document_mrz
+from app.core.forensics.aadhaar_qr_verifier import verify_aadhaar_qr
 from app.blockchain.hash_utils import generate_document_hash
 from app.blockchain.service import register_document, verify_document
 
@@ -39,28 +40,6 @@ async def upload_document(
         ocr_result = process_document_image(image_bytes)
         
         doc_number = ocr_result.get("doc_number", "Unknown")
-        
-        # 2. Check if Document exists to avoid Unique Constraint violation
-        # existing_doc = None
-        # if doc_number != "Unknown":
-        #     existing_doc = db.query(Document).filter(Document.doc_number == doc_number).first()
-            
-        # if existing_doc:
-        #     existing_doc.full_name = ocr_result.get("full_name", "Unknown")
-        #     existing_doc.doc_type = ocr_result.get("doc_type", DocumentTypeEnum.UNKNOWN)
-        #     existing_doc.dob = ocr_result.get("dob", None)
-        #     existing_doc.gender = ocr_result.get("gender", None)
-        #     existing_doc.issue_date = ocr_result.get("issue_date", None)
-        #     existing_doc.address = ocr_result.get("address", None)
-        #     existing_doc.expiry_date = ocr_result.get("expiry_date", None)
-        #     existing_doc.nationality = ocr_result.get("nationality", None)
-        #     existing_doc.mrz_no = ocr_result.get("mrz_no", None)
-        #     existing_doc.doc_photo = image_bytes
-        #     existing_doc.user_id = user_id
-        #     db.commit()
-        #     db.refresh(existing_doc)
-        #     new_doc = existing_doc
-        # else:
         
         new_doc = Document(
             full_name=ocr_result.get("full_name", "Unknown"),
@@ -150,18 +129,33 @@ async def verify_person(
     db.commit()
     db.refresh(doc)
 
-    mrz_result = {
+    document_specific_result = {
         "valid": False,
         "reasons": []
     }
     
     if(doc.doc_type.value.lower() == "passport"):
-        mrz_result = verify_document_mrz(doc)
+        document_specific_result = verify_document_mrz(doc)
+        validation_type = "mrz"
 
-    if not mrz_result["valid"]:
+    if(doc.doc_type.value.lower() == "aadhar"):
+        ocr_details =  {
+            "full_name": doc.full_name,
+            "dob": doc.dob,
+            "gender": doc.gender,
+            "doc_number": doc.doc_number
+        }
+        aadhar_result = verify_aadhaar_qr(doc.doc_photo, ocr_details)
+        if(aadhar_result["success"]):
+            document_specific_result["valid"] = aadhar_result["valid"]
+            document_specific_result["reasons"] = aadhar_result["reasons"]
+        validation_type = "Aadhar-QR"
+
+
+    if not document_specific_result["valid"]:
         print("MRZ verification failed")
 
-        for reason in mrz_result["reasons"]:
+        for reason in document_specific_result["reasons"]:
             print(reason)
     else:
         print("MRZ validation TRue")
@@ -178,6 +172,7 @@ async def verify_person(
     if not blockchain_document:
         result = False
         blockchain_face_score = 0.0
+        transaction_hash = ""
     else:
         document_hash, canonical_string = generate_document_hash(
             doc_type=doc.doc_type.value,
@@ -187,7 +182,7 @@ async def verify_person(
             gender=doc.gender,
             nationality=doc.nationality
         )
-
+        transaction_hash = blockchain_document.transaction_hash
         try:
             result = verify_document(
                     document_id=str(blockchain_document.id),
@@ -235,17 +230,18 @@ async def verify_person(
     db.refresh(verification)
 
     verification_confidence = (
-        0.35 * face_score
-        + 0.10 * (1.0 if mrz_result["valid"] else 0.0)
+        0.20 * face_score
+        + 0.20 * (1.0 if document_specific_result["valid"] else 0.0)
         + 0.20 * blockchain_face_score
-        + 0.25 * (1.0 if result else 0.0)
-        + 0.10 * ocr_confidence
+        + 0.20 * (1.0 if result else 0.0)
+        + 0.20 * ocr_confidence
     )
     # 5. Create Risk Entry
     risk = Risk(
         ocr_confidence=ocr_confidence,
-        mrz_validation=mrz_result["valid"],
-        reasons=json.dumps(mrz_result["reasons"]),
+        document_specific_validation=document_specific_result["valid"],
+        validation_type=validation_type,
+        reasons=json.dumps(document_specific_result["reasons"]),
         face_match_score=face_score,
         database_verification=True,
         approved=False,
@@ -265,13 +261,14 @@ async def verify_person(
         verification_id=verification.id,
         risk_id=risk.id,
         face_match_score=risk.face_match_score,
-        mrz_validation=mrz_result["valid"],
-        reasons=mrz_result["reasons"],
+        document_specific_validation=risk.document_specific_validation,
+        validation_type=risk.validation_type,
+        reasons=document_specific_result["reasons"],
         ocr_confidence=risk.ocr_confidence,
         tampering_probability=risk.tampering_probability,
         status=risk.status,
         blockchain_verification=result,
-        transaction_link=f"https://sepolia.etherscan.io/tx/{blockchain_document.transaction_hash}",
+        transaction_link=f"https://sepolia.etherscan.io/tx/{transaction_hash}",
         blockchain_face_score=blockchain_face_score
     )
 
