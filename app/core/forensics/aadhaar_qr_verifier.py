@@ -44,7 +44,8 @@ def _match(field: str, left: Any, right: Any) -> dict[str, Any]:
 
     if field == "gender":
         a, b = _text(left), _text(right)
-        matched = a[0].lower() == b[0].lower()
+        if(b != None):
+            matched = a[0].lower() == b[0].lower()
         return {"match": matched, "reason": None if matched else f"{field} does not match"}
 
     a, b = (_date(left), _date(right)) if field == "dob" else (_text(left), _text(right))

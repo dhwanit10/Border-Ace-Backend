@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from app.core.config import settings
+from passlib.context import CryptContext
 
 # Change this later and preferably move it to .env
 SECRET_KEY = settings.SECRET_KEY
@@ -13,6 +14,22 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 security_scheme = HTTPBearer()
+
+
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
+)
+
+# =====================================
+# HASH PASSWORD
+# =====================================
+
+def hash_password(password: str):
+
+    return pwd_context.hash(password)
+
 
 
 # ==========================================

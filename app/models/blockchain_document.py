@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Text, String, LargeBinary, DateTime
 from sqlalchemy.sql import func
 
-from app.models.base import Base
+from app.core.database import Base
 
 
 class BlockchainDocument(Base):

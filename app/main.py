@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.core.dependencies import get_current_user
@@ -16,10 +16,12 @@ from app.api.v1.endpoints import (
     verification
 )
 from app.api.v1.endpoints import blockchain
+from app.core.bootstrap import initialize_database
 
 
 # uncomment this for running the first time and then delete this code 
-# init_database()
+# initialize_database()
+
 
 
 app = FastAPI(
@@ -36,6 +38,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+
+# @app.on_event("startup")
+# def startup():
+
+#     initialize_database()
 
 
 # ==========================================

@@ -10,14 +10,15 @@ from app.models import (
     VerificationEntry, Risk, System, Session
       # Import enums
 )
+from app.core.bootstrap import initialize_database
 from sqlalchemy import text
 
 def init_database():
     """Initialize or reset the database with new schema"""
-    print("🔄 Creating tables with updated schema...")
+    print("🔄 Creating tables and bootstrap user with updated schema...")
     
     # Create all tables (this will not drop existing tables)
-    Base.metadata.create_all(bind=engine)
+    initialize_database()
     
     print("✅ Tables created/verified!")
     

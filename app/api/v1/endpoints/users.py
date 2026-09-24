@@ -12,7 +12,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-from app.core.security import create_access_token
+from app.core.security import create_access_token, hash_password
 from app.core.database import get_db
 
 from app.models.user import User

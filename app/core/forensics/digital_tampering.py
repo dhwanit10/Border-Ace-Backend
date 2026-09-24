@@ -1,10 +1,10 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Any
-from .copy_move import analyze_copy_move
-from .ela import analyze_ela
-from .metadata import analyze_metadata
-from .text_forensics import analyze_text_forensics
+from copy_move import analyze_copy_move
+from ela import analyze_ela
+from metadata import analyze_metadata
+from text_forensics import analyze_text_forensics
 
 def _get_reasons(results: dict[str, dict[str, Any]]) -> list[str]:
     reasons = []
