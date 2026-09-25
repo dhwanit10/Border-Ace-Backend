@@ -43,8 +43,10 @@ def _match(field: str, left: Any, right: Any) -> dict[str, Any]:
        return {"match": matched, "reason": None if matched else f"{field} does not match"}
 
     if field == "gender":
+        b = 0
+        matched = False
         a, b = _text(left), _text(right)
-        if(b != None):
+        if(b):
             matched = a[0].lower() == b[0].lower()
         return {"match": matched, "reason": None if matched else f"{field} does not match"}
 
