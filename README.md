@@ -1,160 +1,192 @@
-# Document Screening System Backend
+# Border Ace — Backend
 
-The Document Screening System is a FastAPI backend for secure identity and
-document verification. It combines OCR, face matching, document-specific
-validation, session management, and blockchain-backed document verification in
-one API. It is intended for controlled officer and administrator workflows,
-where a document can be uploaded, its details extracted, a person can be
-matched against the document, and the verification result can be recorded for
-later review.
+Border Ace is an AI-powered fake identity and document screening platform for border checkpoints. This repository contains its FastAPI backend: the service that receives identity and travel documents, extracts and validates their details, compares faces, assesses risk, and keeps a verifiable record of the screening workflow.
 
-## Main features
+The goal is to help border-security personnel make consistent, evidence-based decisions in seconds rather than relying only on time-consuming manual inspection.
 
-- REST API built with FastAPI and automatic OpenAPI documentation.
-- PostgreSQL persistence using SQLAlchemy models and sessions.
-- JWT-based authentication with password hashing using bcrypt.
-- User and role support for officers and administrators.
-- Officer/system online and offline session tracking.
-- OCR extraction for identity-document fields such as name, document number,
-  date of birth, gender, nationality, address, and expiry date.
-- Face detection and face matching for identity verification.
-- Passport MRZ validation and Aadhaar QR/forensic verification helpers.
-- Document, verification, risk, history, and system workflow endpoints.
-- Blockchain document registration and verification on the Ethereum Sepolia
-  test network.
-- Canonical document hashing and transaction-hash storage for tamper-evident
-  verification.
-- CORS middleware for frontend integration.
+**Frontend:** [border-ace.vercel.app](https://border-ace.vercel.app/)
 
-## Technology and libraries
+**Project resources, sample images, and supporting information:** [Google Drive folder](https://drive.google.com/drive/folders/12KQaR0Bqt4Xpok-gTGaW1byQ5Nr0c_e4?usp=sharing)
 
-| Area | Technology |
-| --- | --- |
-| API | Python, FastAPI, Uvicorn, Pydantic |
-| Database | PostgreSQL, SQLAlchemy, Alembic |
-| Authentication | JWT (`python-jose`), Passlib, bcrypt |
-| OCR and image processing | RapidOCR, OpenCV, Pillow, NumPy |
-| Face verification | InsightFace and ONNX Runtime |
-| Document validation | MRZ validation, Aadhaar QR decoding and forensic checks |
-| Blockchain | Ethereum Sepolia, Web3.py, contract ABI, document hashes |
-| Supporting tools | Python dotenv, multipart uploads, NetworkX and scientific Python packages |
+## The challenge
 
-The scoring workflow uses face score, blockchain face score, blockchain result,
-and OCR confidence. The current weights are documented in `meaningful.txt`.
+Border checkpoints must process large volumes of passports, visas, national identity cards, permits, and travel authorizations. Manual review and basic database lookups can miss sophisticated fraud and introduce delays. Border Ace is designed to address issues including:
 
-## Project layout
+- Forged passports, visas, and visa stamps
+- Altered photographs, personal details, dates of birth, and other document text
+- Identity impersonation and multiple identities associated with one person
+- Expired, tampered, or blacklisted travel documents
+- Inconsistent screening decisions caused by high passenger volume
+
+## What Border Ace does
+
+### Document intelligence
+
+- Accepts identity and travel-document images, including passports, visas, national IDs, driving licences, and permits.
+- Uses OCR to extract key details such as name, document number, nationality, date of birth, gender, issue date, expiry date, address, and MRZ information.
+- Stores the document and extracted fields so officers can review the result in the screening workflow.
+
+### Validation and fraud signals
+
+- Validates passport machine-readable zones (MRZ).
+- Includes Aadhaar QR verification and document-forensics helpers.
+- Provides foundations for detecting text manipulation, photo replacement, stamp forgery, image metadata anomalies, and other physical or digital tampering signals.
+
+### Face and identity verification
+
+- Captures a presented face image and compares it with the portrait on a document.
+- Verifies an officer's face before opening a screening session.
+- Uses face-match results alongside document and OCR evidence in the verification workflow.
+
+### Risk, workflow, and auditability
+
+- Combines OCR confidence, face-match scores, document validation, and blockchain checks into a risk-oriented screening result.
+- Supports officer and system sessions, verification status updates, and case history.
+- Can register canonical document hashes on Ethereum Sepolia and later verify the stored record for tamper-evident document checks.
+- Uses JWT authentication and role-aware users for controlled operational access.
+
+## Architecture
+
+```text
+Frontend (Vercel)
+        |
+        v
+FastAPI API ──> PostgreSQL
+    |   |             |
+    |   ├─ OCR / MRZ / QR validation / forensics
+    |   ├─ Face matching
+    |   └─ Risk, session, and history workflows
+    |
+    └──> Ethereum Sepolia (optional document-hash verification)
+```
+
+## Project structure
 
 ```text
 app/
-|-- api/v1/endpoints/   API routers for users, workflow, verification, documents, and blockchain
-|-- blockchain/         Web3 service, contract ABI, and hash utilities
-|-- core/               configuration, database, OCR, face matching, security, and forensics
-|-- models/             SQLAlchemy database models
-|-- schemas/            Pydantic request and response schemas
-`-- main.py             FastAPI application and router registration
+├── api/v1/endpoints/  API routes for users, verification, workflow, documents,
+│                      systems, sessions, history, authentication, and blockchain
+├── blockchain/        Web3 integration, contract ABI, and document hashing
+├── core/              configuration, database, bootstrap, security, OCR, face
+│                      matching, MRZ validation, and forensic utilities
+├── models/            SQLAlchemy database models
+├── schemas/           Pydantic request and response schemas
+└── main.py            FastAPI application and router registration
+.env.example           Environment-variable template
+requirements.txt       Python dependencies
 ```
 
-## Setup
+## Quick start
 
-### 1. Prerequisites
+### Prerequisites
 
 - Python 3.11 or newer
 - PostgreSQL
-- An Ethereum Sepolia RPC endpoint
-- A funded Sepolia wallet if blockchain registration is required
-- The deployed smart-contract address and compatible contract ABI
+- Optional for blockchain functions: a Sepolia RPC URL, funded wallet private key, deployed contract address, and compatible contract ABI
 
-### 2. Create an environment
+### 1. Create a virtual environment and install dependencies
 
 From the repository root:
 
 ```bash
 python -m venv .venv
 
-# Windows
-.venv\Scripts\activate
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
 
 # macOS/Linux
 source .venv/bin/activate
-```
 
-Install the pinned dependencies:
-
-```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 3. Configure environment variables
+### 2. Configure `.env`
 
-Copy `.env.example` to `.env` and replace every placeholder with the values
-for your local PostgreSQL database, JWT configuration, and Sepolia deployment.
-Do not commit `.env`, wallet private keys, or production secrets.
-
-`app/core/config.py` builds the PostgreSQL connection string from
-`POSTGRES_SERVER`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`.
-`DATABASE_URL` is therefore optional in the current implementation.
-
-### 4. Initialize the database
-
-The database tables are created through the initialization helper in
-`app/core/init_db.py`. For a first-time local setup, either run the helper
-directly:
+Copy the template and replace its placeholder values with local development values. Never commit `.env`, database passwords, JWT secrets, or wallet keys.
 
 ```bash
-python -m app.core.init_db
+# Windows PowerShell
+Copy-Item .env.example .env
+
+# macOS/Linux
+cp .env.example .env
 ```
 
-or temporarily uncomment `init_database()` in `app/main.py` and start the
-application once. The call should be disabled again after initialization.
-Review `app/main.py` and `app/core/init_db.py` for the complete database setup
-and available inspection/reset commands. The reset operation deletes existing
-data and should only be used deliberately.
+Configure the following groups in `.env`:
 
-### 5. Start the API
+| Group | Variables | Purpose |
+| --- | --- | --- |
+| PostgreSQL | `POSTGRES_SERVER`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Database connection; the backend constructs the PostgreSQL URL from these values. |
+| Bootstrap administrator | `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD`, `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_DOB`, `BOOTSTRAP_ADMIN_GENDER`, `BOOTSTRAP_ADMIN_AADHAR`, `BOOTSTRAP_ADMIN_PHONE`, `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_FACE_IMAGE` | Details for the first administrator account. `BOOTSTRAP_ADMIN_FACE_IMAGE` is an optional local image path. |
+| Bootstrap system | `BOOTSTRAP_SYSTEM_NAME` | Name for the first Border Ace screening system. |
+| JWT | `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` | Token signing and expiry settings. Use a long, unique secret. |
+| Blockchain (optional) | `SEPOLIA_RPC_URL`, `BLOCKCHAIN_PRIVATE_KEY`, `CONTRACT_ADDRESS` | Required only for Ethereum Sepolia document-registration and verification features. |
+
+### 3. First-time database bootstrap
+
+The first administrator and initial system are created from the bootstrap values in `.env`; no JWT bypass or manual first-user API call is needed.
+
+Before starting the application for the first time, open [`app/main.py`](app/main.py) and uncomment this line:
+
+```python
+initialize_database()
+```
+
+Start the API once:
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The default development server is available at
-`http://127.0.0.1:8000`. Useful public endpoints are:
+The bootstrap routine creates the database tables, the administrator, and the initial system. Once it has completed successfully, stop the server and comment out or remove `initialize_database()` again, as indicated in `app/main.py`. This prevents the bootstrap code from running on every startup.
 
-- `GET /` - service welcome message and version
-- `GET /health` - health check
-- `GET /docs` - Swagger UI
-- `GET /redoc` - ReDoc
-- `GET /api/v1/openapi.json` - OpenAPI schema
+### 4. Start the API normally
 
-## Typical verification flow
+```bash
+uvicorn app.main:app --reload
+```
 
-1. Create a user and upload the user's reference face image.
-2. Log in through the backend API and copy the returned JWT access token.
-3. In Swagger UI, click **Authorize** and enter the bearer token.
-4. Create or select an available system and start an officer session.
-5. Upload a document for OCR and document-field extraction.
-6. Run the person-verification workflow with the captured face image.
-7. Use the blockchain endpoints to upload/register a document and check its
-   stored hash and transaction-backed verification result.
-8. Review history and end the session through the logout endpoint.
+The API is available at `http://127.0.0.1:8000`.
 
-Most routes under verification, workflow, documents, history, session,
-authentication, and blockchain require a valid JWT. The route prefixes and
-router registration are defined in `app/main.py`.
+- `GET /health` — health check
+- `GET /docs` — interactive Swagger/OpenAPI documentation
+- `GET /redoc` — ReDoc documentation
+- `GET /api/v1/openapi.json` — OpenAPI schema
 
-## Important user creation and security note
+## Screening workflow
 
-There is intentionally no registration page in the frontend because creating
-identity-verification users is a controlled administrative operation. To create
-the first user, use the backend documentation at `/docs` and call
-`POST /api/v1/users/create` before attempting protected requests. Then use
-`POST /api/v1/users/login` to obtain a token. This initial
-setup step is the documented JWT bypass: the public create-user endpoint lets
-you establish the first account so that you can then log in and obtain a JWT.
-After that, an administrator should manage user creation. The frontend does
-not expose public registration; administrators can create users through the
-backend API.
+1. Configure the bootstrap administrator and system in `.env`, then complete the one-time bootstrap described above.
+2. Sign in through the user login endpoint and use the returned bearer token for protected API requests.
+3. Verify the officer's face and open a session on an available screening system.
+4. Upload a travel or identity document. Border Ace extracts the available document fields through OCR.
+5. Submit the presented person's image and extracted document data for face matching and document-specific validation.
+6. Review validation results, face-match score, OCR confidence, blockchain result (when configured), and the resulting risk information.
+7. Update the case status, review its history, and close the officer session.
 
-For database behavior and initialization details, refer to `app/main.py`,
-`app/core/config.py`, and `app/core/init_db.py`. Never use real wallet keys or
-production credentials in local example files.
+## API areas
+
+The live API contract, request fields, and response examples are available in Swagger at `/docs` when the server is running. The main route groups are:
+
+| Route prefix | Responsibility |
+| --- | --- |
+| `/api/v1/users` | User management, face-image upload, and login |
+| `/api/v1/verification` | Officer face verification and session creation |
+| `/api/v1/workflow` | Document upload, person verification, and case status |
+| `/api/v1/documents` | Stored document, person, and user-face images |
+| `/api/v1/system` | Screening-system availability and creation |
+| `/api/v1/session` | Active and historical session information |
+| `/api/v1/data` | Screening history |
+| `/api/v1/blockchain` | Document upload, registration, and hash verification |
+| `/api/v1/auth` | Logout |
+
+## Security notes
+
+- Keep `.env` private. It can contain database credentials, an administrator password, JWT signing material, and a blockchain wallet private key.
+- Replace every example placeholder before use, especially `SECRET_KEY` and blockchain credentials.
+- Use HTTPS, restricted CORS origins, strong secrets, and a managed secret store before deploying beyond development.
+- Blockchain features are optional; do not use a production wallet or real private key in demo configuration.
+
+## Expected impact
+
+Border Ace is intended to reduce document verification from minutes to seconds, improve detection of forged and tampered documents, standardize screening decisions, and create a useful digital trail for investigation and intelligence work.
