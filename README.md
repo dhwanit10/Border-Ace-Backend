@@ -6,6 +6,10 @@ The goal is to help border-security personnel make consistent, evidence-based de
 
 **Frontend:** [border-ace.vercel.app](https://border-ace.vercel.app/)
 
+**System Design and Workflow:** [System workflow link](https://excalidraw.com/#json=oW_hR1GxT1uW0RQjP1wzY,rM660n_JaAYtFmNtC7P_Dg)
+
+**System Mockup** [link](https://excalidraw.com/#json=_MXPk5sCLtLV-Zfuc7ATU,pPEFB53P7VyleKg54W66Uw)
+
 **Project resources, sample images, and supporting information:** [Google Drive folder](https://drive.google.com/drive/folders/12KQaR0Bqt4Xpok-gTGaW1byQ5Nr0c_e4?usp=sharing)
 
 ## The challenge
